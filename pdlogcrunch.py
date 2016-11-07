@@ -4,7 +4,7 @@
 # Compile a raw PagerDuty log file into something more organized for Excel
 #
 # Dean Blevins
-# Oct 2015
+# Nov 2016
 #
 
 #import pdb		# Debugger
@@ -13,14 +13,14 @@ import argparse		# argv processor
 import sys		# System functions
 import os		# os.path.basename()
 import csv		# CSV format functions
-import collections          #
+import collections      #
 
 #####
-##### FUNCTION: process_pd_log()
+##### FUNCTION: sub_total_log()
 #####
 
 def sub_total_log( fp, verbose, Verbose ):
-	"Process a PagerDuty CSV log file"
+	"Summarize stats of a PagerDuty CSV log file"
 
         MonList = []
 	total = 0
@@ -55,6 +55,41 @@ def sub_total_log( fp, verbose, Verbose ):
 #####
 
 #####
+##### FUNCTION: proc_terse()
+#####
+
+def proc_terse( fp, ofp, verbose, Verbose ):
+	"Output a terse output file: ID,Monitor,Date,Time"
+
+	logfile = csv.reader(fp)
+        outfile = csv.writer(ofp)
+
+        TerseLine = []
+
+	# Read each line, manipulate it and write it out
+	for logline in logfile:
+                # Build the new line
+                # [0] = serial number
+                # [1] = name of the source/monitor
+                TerseLine.append(logline[0])
+                TerseLine.append(logline[1])
+                # Add the date, first change 2016-08-01 -> 08/01/2016
+                timestamp = logline[2].split('T', 1)
+                datestring = timestamp[0].split('-')
+                date = datestring[1] + "/" + datestring[2] + "/" + datestring[0]
+                TerseLine.append(date)
+                # Get the time
+                time = timestamp[1].rstrip("Z")
+                TerseLine.append(time)
+                
+                outfile.writerow(TerseLine)
+                TerseLine = []
+
+#####
+##### END FUNCTION: proc_terse()
+#####
+
+#####
 ##### MAIN
 #####
 
@@ -65,9 +100,10 @@ TotalLines =	0
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--verbose", help="verbose output", action="store_true")
-parser.add_argument("-V", "--Verbose", help="more verbose output", action="store_true")
+parser.add_argument("-V", "--Verbose", help="very verbose output", action="store_true")
 parser.add_argument("-s", "--summary", help="subtotal the drivers", action="store_true")
-parser.add_argument("-t", "--totals", help="totals all files", action="store_true")
+parser.add_argument("-o", "--output", type=str, help="output file (CSV)")
+parser.add_argument("-t", "--terse", help="terse output components", action="store_true")
 parser.add_argument("--version", help="version info", action="store_true")
 parser.add_argument("files", help="source file(s)...", nargs=argparse.REMAINDER)
 args = parser.parse_args()
@@ -91,6 +127,8 @@ for index in range(0, len(args.files)):
 
 	with open(args.files[index], 'r') as fp:
 
+                # Default is to write to stdout
+                ofp = sys.stdout
 
 		if args.verbose or args.Verbose:
 			print "Logfile name:", args.files[index]
@@ -98,7 +136,14 @@ for index in range(0, len(args.files)):
 		if args.summary:
 			sub_total_log( fp, args.verbose, args.Verbose )
 
-		fp.close()
+                if args.output:
+                        ofp = open(args.output, 'w')
+		        if args.verbose or args.Verbose:
+		        	print "Output file name:", args.output
 
-if args.totals:
-	print "Total: ", TotalLines
+		if args.terse:
+			proc_terse( fp, ofp, args.verbose, args.Verbose )
+
+		fp.close()
+		ofp.close()
+
