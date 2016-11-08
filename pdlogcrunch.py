@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 #
-# Compile a raw PagerDuty log file into something more organized for Excel
+# Compile raw PagerDuty log file(s) into something more organized for Excel
 #
 # Dean Blevins
 # Nov 2016
@@ -33,20 +33,14 @@ def sub_total_log( fp, verbose, Verbose ):
 	    MonList.append(logline[1])
 	    total += 1
 
-	#print(MonList)
 	SumsMonList = collections.Counter(MonList)
-	#print(SumsMonList)
-	#print(list(SumsMonList.elements()))
-	#print(list(SumsMonList.values()))
-	#print(list(SumsMonList.items()))
-	#print(SumsMonList.items())
 
-	for Mon, count in SumsMonList.items():
+        # Dump the list, sorted by count
+	for Mon, count in SumsMonList.most_common():
 		Perc = float(count)/float(total) * 100
-		#print("{0}: {1}".format(Mon, count))
-		print "%s: %d (%.1f%%)" % (Mon, count, Perc)
+		print '{:_<25} {:5d} {:5.1f}%'.format(Mon, count, Perc)
 
-	print "Total log lines = ", total
+	print 'Total log lines({:s}) = {:d}'.format(fp.name, total)
 
 	return()
 
@@ -144,6 +138,9 @@ for index in range(0, len(args.files)):
 		if args.terse:
 			proc_terse( fp, ofp, args.verbose, args.Verbose )
 
+                # Close the input file
 		fp.close()
-		ofp.close()
+
+# Close the output file
+ofp.close()
 
